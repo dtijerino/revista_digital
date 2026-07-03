@@ -1,0 +1,1656 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="description" content="Revista digital tipo flipbook sobre diseño, producción, aplicaciones pedagógicas y evaluación de materiales audiovisuales educativos." />
+  <title>Miradas Audiovisuales | Revista Digital</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&family=Playfair+Display:ital,wght@0,700;0,900;1,700&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/turn.js/4/turn.min.js"></script>
+  <style>
+    /* ========== DESIGN TOKENS ========== */
+    :root {
+      --ink: #111827;
+      --muted: #5b6472;
+      --paper: #fffaf0;
+      --paper-2: #fffdf7;
+      --dark: #07111f;
+      --blue: #165dff;
+      --cyan: #10c7d8;
+      --orange: #ff8a3d;
+      --yellow: #ffd166;
+      --green: #27c083;
+      --purple: #7c3aed;
+      --line: rgba(17,24,39,.14);
+      --font-body: 'Inter', ui-sans-serif, system-ui, -apple-system, sans-serif;
+      --font-display: 'Playfair Display', Georgia, serif;
+    }
+
+    /* ========== RESET ========== */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body {
+      min-height: 100vh;
+      font-family: var(--font-body);
+      color: #f8fafc;
+      overflow-x: hidden;
+      background:
+        radial-gradient(circle at 10% 10%, rgba(16,199,216,.28), transparent 32%),
+        radial-gradient(circle at 88% 8%, rgba(124,58,237,.32), transparent 34%),
+        radial-gradient(circle at 55% 92%, rgba(255,138,61,.22), transparent 34%),
+        linear-gradient(135deg, #050914, #0b1220 45%, #101827);
+      background-attachment: fixed;
+    }
+
+    /* Grid overlay */
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      background-image:
+        linear-gradient(rgba(255,255,255,.025) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,.025) 1px, transparent 1px);
+      background-size: 46px 46px;
+      mask-image: linear-gradient(to bottom, rgba(0,0,0,.6), transparent 88%);
+      z-index: 0;
+    }
+
+    a { color: inherit; }
+    img { max-width: 100%; display: block; }
+
+    /* ========== LAYOUT ========== */
+    .app {
+      width: 100%;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      z-index: 1;
+      padding: 20px 0;
+    }
+
+    /* ========== TOP BAR ========== */
+    .topbar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 100;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 20px;
+      background: rgba(7,17,31,.82);
+      backdrop-filter: blur(24px) saturate(1.4);
+      border-bottom: 1px solid rgba(255,255,255,.08);
+      transition: transform .3s ease;
+    }
+
+    .topbar.hidden { transform: translateY(-100%); }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-width: 0;
+    }
+
+    .brand-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 12px;
+      background: linear-gradient(135deg, var(--blue), var(--cyan));
+      display: grid;
+      place-items: center;
+      font-size: 1.1rem;
+      flex-shrink: 0;
+      box-shadow: 0 6px 20px rgba(22,93,255,.3);
+    }
+
+    .brand-text strong {
+      display: block;
+      font-size: .82rem;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+      color: #dbeafe;
+      line-height: 1.2;
+    }
+
+    .brand-text span {
+      color: #8b9cb8;
+      font-size: .72rem;
+    }
+
+    .topbar-controls {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    /* ========== TOC SIDEBAR ========== */
+    .toc-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,.6);
+      backdrop-filter: blur(6px);
+      z-index: 200;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity .35s ease;
+    }
+
+    .toc-overlay.open {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .toc-sidebar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      bottom: 0;
+      width: min(380px, 88vw);
+      background: rgba(11,18,32,.96);
+      backdrop-filter: blur(30px);
+      border-right: 1px solid rgba(255,255,255,.1);
+      z-index: 210;
+      transform: translateX(-105%);
+      transition: transform .4s cubic-bezier(.4,0,.2,1);
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+    }
+
+    .toc-sidebar.open { transform: translateX(0); }
+
+    .toc-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 24px 24px 18px;
+      border-bottom: 1px solid rgba(255,255,255,.08);
+    }
+
+    .toc-header h2 {
+      font-family: var(--font-display);
+      font-size: 1.6rem;
+      color: #fff;
+      letter-spacing: -.03em;
+    }
+
+    .toc-close {
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
+      border: 1px solid rgba(255,255,255,.15);
+      background: rgba(255,255,255,.06);
+      color: #fff;
+      font-size: 1.2rem;
+      cursor: pointer;
+      display: grid;
+      place-items: center;
+      transition: .2s ease;
+    }
+
+    .toc-close:hover { background: rgba(255,255,255,.14); }
+
+    .toc-list {
+      list-style: none;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .toc-item {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 14px 16px;
+      border-radius: 14px;
+      cursor: pointer;
+      transition: .2s ease;
+      color: #c8d4e4;
+      font-weight: 600;
+      font-size: .92rem;
+    }
+
+    .toc-item:hover { background: rgba(255,255,255,.08); color: #fff; }
+    .toc-item.active { background: linear-gradient(135deg, rgba(22,93,255,.2), rgba(16,199,216,.15)); color: var(--yellow); }
+
+    .toc-item-num {
+      width: 32px;
+      height: 32px;
+      border-radius: 10px;
+      background: rgba(255,255,255,.07);
+      display: grid;
+      place-items: center;
+      font-size: .78rem;
+      font-weight: 800;
+      color: var(--cyan);
+      flex-shrink: 0;
+    }
+
+    .toc-item.active .toc-item-num {
+      background: linear-gradient(135deg, var(--blue), var(--cyan));
+      color: #fff;
+    }
+
+    /* ========== BUTTONS ========== */
+    .btn {
+      border: 0;
+      border-radius: 12px;
+      padding: 10px 16px;
+      font-weight: 700;
+      font-size: .82rem;
+      cursor: pointer;
+      color: #fff;
+      background: rgba(255,255,255,.08);
+      border: 1px solid rgba(255,255,255,.12);
+      transition: .25s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-family: var(--font-body);
+      backdrop-filter: blur(8px);
+    }
+
+    .btn:hover { background: rgba(255,255,255,.16); transform: translateY(-1px); }
+    .btn:disabled { opacity: .3; cursor: not-allowed; transform: none; }
+
+    .btn-primary {
+      color: var(--dark);
+      background: linear-gradient(135deg, var(--yellow), var(--orange));
+      border: none;
+      box-shadow: 0 8px 24px rgba(255,138,61,.25);
+    }
+
+    .btn-primary:hover { box-shadow: 0 12px 32px rgba(255,138,61,.35); }
+
+    /* ========== MAGAZINE CONTAINER (Turn.js) ========== */
+    .magazine-viewport {
+      width: 100%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      perspective: 2400px;
+      padding: 60px 20px 20px;
+      min-height: 100vh;
+    }
+
+    .magazine-wrapper {
+      position: relative;
+      filter: drop-shadow(0 40px 80px rgba(0,0,0,.5));
+    }
+
+    /* Turn.js book shadow */
+    .magazine-wrapper::before {
+      content: "";
+      position: absolute;
+      left: 8%;
+      right: 8%;
+      bottom: -24px;
+      height: 30px;
+      border-radius: 50%;
+      background: rgba(0,0,0,.5);
+      filter: blur(20px);
+      z-index: -1;
+    }
+
+    #magazine {
+      /* Turn.js sets dimensions via JS */
+    }
+
+    #magazine .turn-page-wrapper {
+      /* Turn.js internal wrapper */
+    }
+
+    /* ========== PAGE STYLES ========== */
+    .page {
+      background:
+        radial-gradient(circle at 20% 8%, rgba(255,209,102,.08), transparent 28%),
+        linear-gradient(180deg, var(--paper-2), var(--paper));
+      color: var(--ink);
+      overflow: hidden;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .page-inner {
+      padding: 36px 38px;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      overflow-y: auto;
+      overflow-x: hidden;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    /* Spine shadow for left/right pages */
+    .page.odd-page::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 0;
+      bottom: 0;
+      width: 28px;
+      background: linear-gradient(90deg, rgba(0,0,0,.15), transparent);
+      z-index: 2;
+      pointer-events: none;
+    }
+
+    .page.even-page::after {
+      content: "";
+      position: absolute;
+      top: 0;
+      right: 0;
+      bottom: 0;
+      width: 28px;
+      background: linear-gradient(270deg, rgba(0,0,0,.15), transparent);
+      z-index: 2;
+      pointer-events: none;
+    }
+
+    /* Page curl hint */
+    .page-curl {
+      position: absolute;
+      right: 0;
+      bottom: 0;
+      width: 50px;
+      height: 50px;
+      background: linear-gradient(135deg, transparent 46%, rgba(0,0,0,.1) 48%, rgba(255,255,255,.7) 50%, rgba(255,255,255,.12));
+      pointer-events: none;
+      opacity: .6;
+      z-index: 3;
+    }
+
+    /* ========== COVER ========== */
+    .page.cover-page {
+      background:
+        linear-gradient(135deg, rgba(7,17,31,.94), rgba(22,93,255,.72)),
+        radial-gradient(circle at 20% 20%, rgba(16,199,216,.7), transparent 34%),
+        radial-gradient(circle at 78% 35%, rgba(255,209,102,.65), transparent 28%),
+        #07111f;
+      color: #fff;
+    }
+
+    .cover-content {
+      padding: 40px;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    .cover-content .mag-tag {
+      display: inline-flex;
+      width: max-content;
+      padding: 8px 14px;
+      border-radius: 999px;
+      background: rgba(255,255,255,.14);
+      border: 1px solid rgba(255,255,255,.2);
+      color: #fff;
+      font-size: .72rem;
+      font-weight: 800;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+
+    .cover-content h1 {
+      font-family: var(--font-display);
+      font-size: clamp(2.4rem, 5vw, 4.6rem);
+      line-height: .88;
+      letter-spacing: -.06em;
+      margin-top: 14px;
+    }
+
+    .cover-content h1 span {
+      color: var(--yellow);
+      display: block;
+      font-style: italic;
+    }
+
+    .cover-content > p {
+      color: #dbeafe;
+      font-size: .92rem;
+      max-width: 500px;
+      margin-top: 10px;
+      line-height: 1.55;
+    }
+
+    .cover-grid {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 20px;
+    }
+
+    .cover-grid .logo-big {
+      width: 80px;
+      height: 80px;
+      background: #fff;
+      border-radius: 22px;
+      padding: 10px;
+      object-fit: contain;
+      box-shadow: 0 18px 50px rgba(0,0,0,.3);
+      flex-shrink: 0;
+    }
+
+    .cover-meta {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 8px;
+      margin-top: 16px;
+    }
+
+    .meta-card {
+      background: rgba(255,255,255,.1);
+      border: 1px solid rgba(255,255,255,.16);
+      border-radius: 14px;
+      padding: 10px 12px;
+      backdrop-filter: blur(10px);
+    }
+
+    .meta-card small {
+      display: block;
+      color: #bfdbfe;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      font-size: .6rem;
+      margin-bottom: 3px;
+    }
+
+    .meta-card strong {
+      font-size: .78rem;
+      color: #fff;
+    }
+
+    /* ========== CONTENT ELEMENTS ========== */
+    .kicker {
+      display: inline-flex;
+      width: max-content;
+      align-items: center;
+      gap: 7px;
+      color: #0d4f91;
+      background: #e8f5ff;
+      border: 1px solid #cdeaff;
+      border-radius: 999px;
+      padding: 6px 12px;
+      font-size: .68rem;
+      font-weight: 800;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+
+    .page-inner h2 {
+      font-family: var(--font-display);
+      font-size: clamp(1.4rem, 2.2vw, 2.2rem);
+      line-height: 1;
+      letter-spacing: -.04em;
+      color: #0b1220;
+    }
+
+    .page-inner h3 {
+      font-size: 1rem;
+      color: #111827;
+      margin-top: 4px;
+    }
+
+    .page-inner p, .page-inner .lead {
+      color: #334155;
+      font-size: .88rem;
+      line-height: 1.6;
+    }
+
+    .lead {
+      font-size: .92rem !important;
+      color: #243041 !important;
+    }
+
+    .quote {
+      margin: 6px 0;
+      padding: 16px;
+      border-radius: 18px;
+      background: #0f172a;
+      color: #fff;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .quote::after {
+      content: "";
+      position: absolute;
+      inset: auto -20px -35px auto;
+      width: 120px;
+      height: 120px;
+      border-radius: 50%;
+      background: rgba(255,209,102,.3);
+    }
+
+    .quote strong { color: var(--yellow); }
+    .quote p { color: #e2e8f0 !important; position: relative; z-index: 1; }
+
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+    }
+
+    .card {
+      background: #fff;
+      border: 1px solid rgba(17,24,39,.1);
+      border-radius: 16px;
+      padding: 14px;
+      box-shadow: 0 8px 24px rgba(15,23,42,.06);
+    }
+
+    .card b { display: block; color: #0f172a; margin-bottom: 4px; font-size: .88rem; }
+    .card p { font-size: .82rem !important; color: #475569 !important; }
+
+    .pill-row { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+    .pill {
+      display: inline-flex;
+      padding: 5px 10px;
+      border-radius: 999px;
+      background: #eef6ff;
+      color: #0d4f91;
+      font-size: .72rem;
+      font-weight: 800;
+      border: 1px solid #d8edff;
+    }
+
+    .process { display: grid; gap: 10px; }
+    .step {
+      display: grid;
+      grid-template-columns: 38px 1fr;
+      gap: 10px;
+      align-items: start;
+    }
+
+    .step span {
+      width: 38px;
+      height: 38px;
+      border-radius: 12px;
+      display: grid;
+      place-items: center;
+      color: white;
+      font-weight: 900;
+      font-size: .82rem;
+      background: linear-gradient(135deg, var(--blue), var(--cyan));
+      box-shadow: 0 8px 20px rgba(22,93,255,.2);
+    }
+
+    .step div {
+      padding-bottom: 10px;
+      border-bottom: 1px solid rgba(17,24,39,.08);
+    }
+
+    .step b { display: block; color: #111827; margin-bottom: 2px; font-size: .88rem; }
+    .step p { font-size: .82rem !important; color: #475569 !important; }
+
+    .visual {
+      min-height: 140px;
+      border-radius: 20px;
+      background:
+        linear-gradient(135deg, rgba(22,93,255,.1), rgba(16,199,216,.1)),
+        repeating-linear-gradient(135deg, rgba(17,24,39,.04) 0 1px, transparent 1px 16px),
+        #fff;
+      border: 1px solid rgba(17,24,39,.1);
+      position: relative;
+      overflow: hidden;
+      display: grid;
+      place-items: center;
+      padding: 16px;
+    }
+
+    .visual .circle { position: absolute; border-radius: 50%; }
+    .c1 { width: 90px; height: 90px; background: rgba(255,138,61,.45); left: -18px; bottom: -20px; }
+    .c2 { width: 110px; height: 110px; background: rgba(22,93,255,.2); right: -28px; top: -25px; }
+    .visual strong {
+      position: relative; z-index: 1;
+      font-family: var(--font-display);
+      font-size: 2.2rem; line-height: .88;
+      letter-spacing: -.06em;
+      color: #0f172a;
+      text-align: center;
+    }
+    .visual em { color: #165dff; font-style: normal; }
+
+    .checklist { display: grid; gap: 7px; }
+    .check {
+      display: flex;
+      gap: 8px;
+      align-items: flex-start;
+      background: #fff;
+      border: 1px solid rgba(17,24,39,.08);
+      padding: 9px 10px;
+      border-radius: 12px;
+      color: #334155;
+      font-size: .82rem;
+      line-height: 1.45;
+    }
+
+    .check::before {
+      content: "✓";
+      width: 22px;
+      height: 22px;
+      border-radius: 7px;
+      background: #dff9ec;
+      color: #0f8f57;
+      display: grid;
+      place-items: center;
+      font-weight: 900;
+      font-size: .72rem;
+      flex: 0 0 auto;
+    }
+
+    .rubric {
+      width: 100%;
+      border-collapse: separate;
+      border-spacing: 0;
+      overflow: hidden;
+      border-radius: 14px;
+      font-size: .78rem;
+      box-shadow: 0 8px 24px rgba(15,23,42,.06);
+    }
+
+    .rubric th {
+      background: #0f172a;
+      color: #fff;
+      padding: 8px 10px;
+      text-align: left;
+      font-size: .74rem;
+    }
+
+    .rubric td {
+      background: #fff;
+      padding: 8px 10px;
+      color: #334155;
+      border-bottom: 1px solid rgba(17,24,39,.08);
+      font-size: .78rem;
+    }
+
+    .rubric tr:last-child td { border-bottom: 0; }
+
+    .case-box {
+      border-radius: 18px;
+      padding: 16px;
+      background: linear-gradient(135deg, rgba(255,209,102,.25), rgba(255,138,61,.12)), #fff;
+      border: 1px solid rgba(17,24,39,.1);
+    }
+
+    .case-box ul { padding-left: 16px; color: #334155; line-height: 1.55; font-size: .85rem; }
+
+    .refs { display: grid; gap: 10px; }
+    .refs p {
+      font-size: .82rem !important;
+      color: #334155 !important;
+      padding-bottom: 8px;
+      border-bottom: 1px solid rgba(17,24,39,.08);
+      word-break: break-word;
+    }
+
+    /* TOC page */
+    .toc-page-list {
+      list-style: none;
+      display: grid;
+      gap: 6px;
+      counter-reset: item;
+    }
+
+    .toc-page-list li {
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      gap: 10px;
+      align-items: center;
+      padding: 10px 0;
+      border-bottom: 1px solid rgba(17,24,39,.1);
+      color: #1f2937;
+      font-weight: 750;
+      font-size: .88rem;
+      cursor: pointer;
+      transition: .2s ease;
+    }
+
+    .toc-page-list li:hover {
+      color: var(--blue);
+    }
+
+    .toc-page-list li::before {
+      counter-increment: item;
+      content: counter(item, decimal-leading-zero);
+      color: #165dff;
+      font-weight: 900;
+      font-size: .78rem;
+    }
+
+    .toc-page-list li span { color: #64748b; font-weight: 700; font-size: .76rem; }
+
+    /* Page footer */
+    .page-number {
+      margin-top: auto;
+      font-size: .7rem;
+      color: #707988;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-top: 1px solid rgba(17,24,39,.1);
+      padding-top: 10px;
+    }
+
+    /* ========== BOTTOM NAV BAR ========== */
+    .bottom-nav {
+      position: fixed;
+      bottom: 16px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 20px;
+      background: rgba(7,17,31,.72);
+      backdrop-filter: blur(24px) saturate(1.4);
+      border: 1px solid rgba(255,255,255,.1);
+      border-radius: 999px;
+      z-index: 90;
+      box-shadow: 0 20px 50px rgba(0,0,0,.3);
+    }
+
+    .nav-btn {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      border: 1px solid rgba(255,255,255,.15);
+      background: rgba(255,255,255,.06);
+      color: #fff;
+      font-size: 1.3rem;
+      cursor: pointer;
+      display: grid;
+      place-items: center;
+      transition: .25s ease;
+      font-family: var(--font-body);
+    }
+
+    .nav-btn:hover { background: rgba(255,255,255,.16); transform: scale(1.08); }
+    .nav-btn:disabled { opacity: .25; cursor: not-allowed; transform: none; }
+
+    .page-indicator {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      min-width: 110px;
+    }
+
+    .page-indicator strong {
+      font-size: .78rem;
+      color: #e2e8f0;
+      font-weight: 700;
+      text-align: center;
+      line-height: 1.2;
+    }
+
+    .progress-track {
+      width: 100%;
+      height: 4px;
+      background: rgba(255,255,255,.12);
+      border-radius: 999px;
+      overflow: hidden;
+    }
+
+    .progress-bar {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, var(--cyan), var(--yellow), var(--orange));
+      border-radius: 999px;
+      transition: width .4s ease;
+    }
+
+    /* ========== MOBILE SINGLE-PAGE MODE ========== */
+    .mobile-magazine {
+      display: none;
+      width: 100%;
+      padding: 60px 10px 90px;
+    }
+
+    .mobile-page {
+      width: 100%;
+      max-width: 520px;
+      margin: 0 auto;
+      min-height: 75vh;
+      background:
+        radial-gradient(circle at 20% 8%, rgba(255,209,102,.08), transparent 28%),
+        linear-gradient(180deg, var(--paper-2), var(--paper));
+      color: var(--ink);
+      border-radius: 24px;
+      box-shadow: 0 30px 80px rgba(0,0,0,.35);
+      display: none;
+      flex-direction: column;
+      gap: 14px;
+      overflow: hidden;
+    }
+
+    .mobile-page.active { display: flex; }
+    .mobile-page .page-inner { padding: 28px 22px; }
+
+    .mobile-page.cover-page {
+      background:
+        linear-gradient(135deg, rgba(7,17,31,.94), rgba(22,93,255,.72)),
+        radial-gradient(circle at 20% 20%, rgba(16,199,216,.7), transparent 34%),
+        radial-gradient(circle at 78% 35%, rgba(255,209,102,.65), transparent 28%),
+        #07111f;
+      color: #fff;
+    }
+
+    /* ========== DESKTOP VS MOBILE ========== */
+    @media (max-width: 900px) {
+      .magazine-viewport { display: none !important; }
+      .mobile-magazine { display: block; }
+      .bottom-nav { bottom: 10px; padding: 8px 14px; gap: 8px; }
+      .nav-btn { width: 40px; height: 40px; font-size: 1.1rem; }
+      .page-indicator { min-width: 90px; }
+      .page-indicator strong { font-size: .72rem; }
+    }
+
+    @media (min-width: 901px) {
+      .mobile-magazine { display: none !important; }
+    }
+
+    /* ========== LOADING SCREEN ========== */
+    .loading-screen {
+      position: fixed;
+      inset: 0;
+      z-index: 1000;
+      background:
+        radial-gradient(circle at 30% 30%, rgba(22,93,255,.3), transparent 50%),
+        #050914;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 24px;
+      transition: opacity .6s ease, visibility .6s ease;
+    }
+
+    .loading-screen.done {
+      opacity: 0;
+      visibility: hidden;
+    }
+
+    .loading-title {
+      font-family: var(--font-display);
+      font-size: clamp(2rem, 5vw, 4rem);
+      letter-spacing: -.06em;
+      line-height: .9;
+      text-align: center;
+    }
+
+    .loading-title span { color: var(--yellow); font-style: italic; display: block; }
+
+    .spinner {
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      border: 3px solid rgba(255,255,255,.1);
+      border-top-color: var(--cyan);
+      animation: spin .8s linear infinite;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .loading-hint {
+      color: #8b9cb8;
+      font-size: .88rem;
+      animation: pulse 1.5s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: .5; }
+      50% { opacity: 1; }
+    }
+
+    /* ========== SWIPE HINT ========== */
+    .swipe-hint {
+      position: fixed;
+      bottom: 80px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(7,17,31,.7);
+      backdrop-filter: blur(12px);
+      padding: 8px 18px;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,.1);
+      color: #c8d4e4;
+      font-size: .78rem;
+      font-weight: 600;
+      z-index: 80;
+      opacity: 0;
+      animation: fadeHint 4s ease forwards;
+      pointer-events: none;
+    }
+
+    @keyframes fadeHint {
+      0% { opacity: 0; transform: translateX(-50%) translateY(10px); }
+      15% { opacity: 1; transform: translateX(-50%) translateY(0); }
+      75% { opacity: 1; }
+      100% { opacity: 0; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- LOADING SCREEN -->
+  <div class="loading-screen" id="loadingScreen">
+    <h1 class="loading-title">Miradas<span>Audiovisuales</span></h1>
+    <div class="spinner"></div>
+    <p class="loading-hint">Preparando tu revista digital…</p>
+  </div>
+
+  <!-- TOP BAR -->
+  <nav class="topbar" id="topbar">
+    <div class="brand">
+      <div class="brand-icon">📖</div>
+      <div class="brand-text">
+        <strong>Miradas Audiovisuales</strong>
+        <span>Revista Digital · 2026</span>
+      </div>
+    </div>
+    <div class="topbar-controls">
+      <button class="btn" id="tocToggle" aria-label="Abrir índice">☰ Índice</button>
+    </div>
+  </nav>
+
+  <!-- TOC SIDEBAR -->
+  <div class="toc-overlay" id="tocOverlay"></div>
+  <aside class="toc-sidebar" id="tocSidebar">
+    <div class="toc-header">
+      <h2>Contenido</h2>
+      <button class="toc-close" id="tocClose" aria-label="Cerrar índice">✕</button>
+    </div>
+    <ul class="toc-list" id="tocList">
+      <!-- Generated by JS -->
+    </ul>
+  </aside>
+
+  <main class="app">
+
+    <!-- DESKTOP: Turn.js magazine -->
+    <div class="magazine-viewport">
+      <div class="magazine-wrapper">
+        <div id="magazine">
+          <!-- Pages injected by JS -->
+        </div>
+      </div>
+    </div>
+
+    <!-- MOBILE: Single-page swipe -->
+    <div class="mobile-magazine" id="mobileMagazine">
+      <!-- Pages injected by JS -->
+    </div>
+
+  </main>
+
+  <!-- BOTTOM NAV -->
+  <div class="bottom-nav">
+    <button class="nav-btn" id="prevBtn" aria-label="Anterior">‹</button>
+    <div class="page-indicator">
+      <strong id="pageLabel">Portada</strong>
+      <div class="progress-track"><div class="progress-bar" id="progressBar"></div></div>
+    </div>
+    <button class="nav-btn" id="nextBtn" aria-label="Siguiente">›</button>
+  </div>
+
+  <!-- SWIPE HINT (mobile) -->
+  <div class="swipe-hint" id="swipeHint">← Desliza para navegar →</div>
+
+  <script>
+  (function(){
+    'use strict';
+
+    /* ===== PAGE DATA ===== */
+    const pages = [
+      /* 0 - Cover */
+      {
+        title: 'Portada',
+        isCover: true,
+        html: `
+          <div class="cover-content">
+            <div>
+              <div class="cover-grid">
+                <div>
+                  <span class="mag-tag">Edición académica · 2026</span>
+                  <h1>Miradas <span>Audiovisuales</span></h1>
+                  <p>Diseño, producción, aplicaciones pedagógicas y evaluación de materiales audiovisuales educativos.</p>
+                </div>
+                <img class="logo-big" src="https://www.elempleo.com/cr/sitio-empresarial/CompanySites/universidad-castro-carazo/resources/images/logo-social.png" alt="Logo Universidad Castro Carazo" />
+              </div>
+            </div>
+            <div class="cover-meta">
+              <div class="meta-card"><small>Curso</small><strong>Tecnología y Materiales Didácticos</strong></div>
+              <div class="meta-card"><small>Nivel</small><strong>Licenciatura universitaria</strong></div>
+              <div class="meta-card"><small>Docente</small><strong>Dra. Ana Lucía Fallas Garro</strong></div>
+              <div class="meta-card"><small>Estudiante</small><strong>Daniel Tijerino Cerón</strong></div>
+              <div class="meta-card"><small>Fecha</small><strong>2/07/2026</strong></div>
+              <div class="meta-card"><small>Sede</small><strong>Central · II cuatrimestre</strong></div>
+            </div>
+            <div class="page-number" style="color:rgba(255,255,255,.5)"><span>Revista digital</span><span>Portada</span></div>
+          </div>
+        `
+      },
+      /* 1 - Editorial */
+      {
+        title: 'Editorial',
+        html: `
+          <div class="page-inner">
+            <span class="kicker">Editorial</span>
+            <h2>El audiovisual educativo no es decoración: es diseño pedagógico.</h2>
+            <p class="lead">Un material audiovisual educativo no debe entenderse como un video bonito, una imagen llamativa o una presentación animada. Su valor real aparece cuando ayuda al estudiante a comprender, analizar, practicar y aplicar un contenido.</p>
+            <div class="quote">
+              <p><strong>Idea central:</strong> el docente no solo transmite información; diseña experiencias de aprendizaje con intención, lenguaje visual, tecnología y evaluación.</p>
+            </div>
+            <p>Esta revista aborda cuatro dimensiones esenciales: diseño, producción, aplicación pedagógica y evaluación. La meta es mirar el recurso audiovisual como una herramienta didáctica completa, no como un simple apoyo visual.</p>
+            <div class="page-number"><span>Miradas Audiovisuales</span><span>1</span></div>
+          </div>
+        `
+      },
+      /* 2 - Índice */
+      {
+        title: 'Índice',
+        html: `
+          <div class="page-inner">
+            <span class="kicker">Contenido</span>
+            <h2>Ruta de lectura</h2>
+            <ol class="toc-page-list" id="tocPageList">
+              <li data-goto="1">Editorial <span>p. 1</span></li>
+              <li data-goto="3">Material audiovisual educativo <span>p. 3</span></li>
+              <li data-goto="4">Diseño pedagógico <span>p. 4</span></li>
+              <li data-goto="6">Producción audiovisual <span>p. 6</span></li>
+              <li data-goto="8">Aplicaciones pedagógicas <span>p. 8</span></li>
+              <li data-goto="10">Evaluación del material <span>p. 10</span></li>
+              <li data-goto="12">Caso práctico <span>p. 12</span></li>
+              <li data-goto="14">Diseño digital y cierre <span>p. 14</span></li>
+            </ol>
+            <div class="visual" aria-hidden="true"><span class="circle c1"></span><span class="circle c2"></span><strong>leer<br><em>mirar</em><br>aprender</strong></div>
+            <div class="page-number"><span>Miradas Audiovisuales</span><span>2</span></div>
+          </div>
+        `
+      },
+      /* 3 - ¿Qué es? */
+      {
+        title: '¿Qué es?',
+        html: `
+          <div class="page-inner">
+            <span class="kicker">Concepto base</span>
+            <h2>¿Qué es un material audiovisual educativo?</h2>
+            <p class="lead">Es un recurso que integra imagen, sonido, texto, movimiento o interacción con una intención didáctica. Puede ser una cápsula de video, tutorial, infografía animada, podcast con apoyo visual, simulación, documental corto o presentación interactiva.</p>
+            <div class="cards">
+              <div class="card"><b>Debe tener propósito</b><p>Responde a un objetivo de aprendizaje, no solo a una intención estética.</p></div>
+              <div class="card"><b>Debe organizar información</b><p>Presenta el contenido en secuencias claras, breves y comprensibles.</p></div>
+              <div class="card"><b>Debe provocar acción</b><p>Invita a resolver, comparar, observar, practicar o reflexionar.</p></div>
+              <div class="card"><b>Debe evaluarse</b><p>Se vincula con una evidencia de aprendizaje verificable.</p></div>
+            </div>
+            <div class="page-number"><span>Miradas Audiovisuales</span><span>3</span></div>
+          </div>
+        `
+      },
+      /* 4 - Diseño pedagógico */
+      {
+        title: 'Diseño pedagógico',
+        html: `
+          <div class="page-inner">
+            <span class="kicker">Diseño</span>
+            <h2>Antes de grabar, hay que pensar como docente.</h2>
+            <p class="lead">El diseño pedagógico define qué se aprenderá, para quién se creará el recurso, cómo se presentará la información y cómo se comprobará el aprendizaje.</p>
+            <div class="process">
+              <div class="step"><span>1</span><div><b>Objetivo claro</b><p>Ejemplo: "Identificar tres riesgos digitales y proponer medidas básicas de protección".</p></div></div>
+              <div class="step"><span>2</span><div><b>Público meta</b><p>Edad, nivel académico, conocimientos previos, acceso tecnológico y necesidades educativas.</p></div></div>
+              <div class="step"><span>3</span><div><b>Guion educativo</b><p>Inicio que motive, desarrollo con ejemplos y cierre con actividad o pregunta.</p></div></div>
+            </div>
+            <div class="pill-row"><span class="pill">Objetivo</span><span class="pill">Audiencia</span><span class="pill">Guion</span><span class="pill">Evaluación</span></div>
+            <div class="page-number"><span>Miradas Audiovisuales</span><span>4</span></div>
+          </div>
+        `
+      },
+      /* 5 - Guion y accesibilidad */
+      {
+        title: 'Guion y accesibilidad',
+        html: `
+          <div class="page-inner">
+            <span class="kicker">Inclusión</span>
+            <h2>Un buen recurso también reduce barreras.</h2>
+            <p>El material audiovisual debe considerar accesibilidad, claridad visual y lenguaje comprensible. El estudiante no debería luchar contra el diseño para entender el contenido.</p>
+            <div class="checklist">
+              <div class="check">Subtítulos o texto de apoyo cuando sea necesario.</div>
+              <div class="check">Buen contraste entre fondo, texto e imágenes.</div>
+              <div class="check">Audio limpio y volumen estable.</div>
+              <div class="check">Lenguaje directo, técnico cuando corresponde, pero no innecesariamente complicado.</div>
+              <div class="check">Duración breve y dividida por bloques.</div>
+              <div class="check">Compatibilidad con celular, computadora y proyector.</div>
+            </div>
+            <div class="quote"><p><strong>Regla práctica:</strong> si el estudiante se pierde por exceso de efectos, texto pequeño o audio malo, el diseño está fallando.</p></div>
+            <div class="page-number"><span>Miradas Audiovisuales</span><span>5</span></div>
+          </div>
+        `
+      },
+      /* 6 - Producción audiovisual */
+      {
+        title: 'Producción audiovisual',
+        html: `
+          <div class="page-inner">
+            <span class="kicker">Producción</span>
+            <h2>De la idea al recurso: tres fases.</h2>
+            <div class="process">
+              <div class="step"><span>A</span><div><b>Preproducción</b><p>Seleccionar tema, objetivo, guion, recursos visuales, plan de grabación e instrumento de evaluación.</p></div></div>
+              <div class="step"><span>B</span><div><b>Producción</b><p>Grabar video, audio, pantalla, entrevista o demostración cuidando iluminación, estabilidad y sonido.</p></div></div>
+              <div class="step"><span>C</span><div><b>Posproducción</b><p>Editar, cortar lo innecesario, agregar subtítulos, exportar y probar el recurso antes de usarlo.</p></div></div>
+            </div>
+            <p>Una producción educativa seria no empieza con la cámara; empieza con la planificación.</p>
+            <div class="page-number"><span>Miradas Audiovisuales</span><span>6</span></div>
+          </div>
+        `
+      },
+      /* 7 - Calidad técnica */
+      {
+        title: 'Calidad técnica',
+        html: `
+          <div class="page-inner">
+            <span class="kicker">Criterio técnico</span>
+            <h2>La calidad técnica debe servir a la comprensión.</h2>
+            <div class="cards">
+              <div class="card"><b>Audio</b><p>Debe escucharse claro. Un video con audio malo pierde valor educativo.</p></div>
+              <div class="card"><b>Imagen</b><p>Debe tener iluminación suficiente, estabilidad y resolución adecuada.</p></div>
+              <div class="card"><b>Edición</b><p>Debe eliminar repeticiones, pausas innecesarias y elementos que distraen.</p></div>
+              <div class="card"><b>Diseño visual</b><p>Debe usar tipografía legible, colores coherentes y jerarquía visual.</p></div>
+            </div>
+            <div class="case-box">
+              <h3>Consejo docente</h3>
+              <p>Editar no significa llenar de efectos. En educación, editar significa ayudar a que el estudiante entienda mejor.</p>
+            </div>
+            <div class="page-number"><span>Miradas Audiovisuales</span><span>7</span></div>
+          </div>
+        `
+      },
+      /* 8 - Aplicación pedagógica */
+      {
+        title: 'Aplicación pedagógica',
+        html: `
+          <div class="page-inner">
+            <span class="kicker">Aula</span>
+            <h2>El video no enseña solo: necesita estrategia.</h2>
+            <p class="lead">Los materiales audiovisuales pueden utilizarse antes, durante o después de la clase. La clave es conectarlos con una actividad pedagógica concreta.</p>
+            <div class="process">
+              <div class="step"><span>1</span><div><b>Antes</b><p>Introducir el tema mediante aula invertida o pregunta generadora.</p></div></div>
+              <div class="step"><span>2</span><div><b>Durante</b><p>Explicar procesos, comparar casos, analizar ejemplos o modelar una práctica.</p></div></div>
+              <div class="step"><span>3</span><div><b>Después</b><p>Reforzar, repasar, responder una guía, resolver un reto o producir evidencia.</p></div></div>
+            </div>
+            <div class="page-number"><span>Miradas Audiovisuales</span><span>8</span></div>
+          </div>
+        `
+      },
+      /* 9 - Estrategias de uso */
+      {
+        title: 'Estrategias de uso',
+        html: `
+          <div class="page-inner">
+            <span class="kicker">Metodología</span>
+            <h2>Aplicaciones concretas en secundaria y universidad.</h2>
+            <div class="cards">
+              <div class="card"><b>Cápsula explicativa</b><p>Video corto para presentar un concepto antes de la clase.</p></div>
+              <div class="card"><b>Tutorial guiado</b><p>Paso a paso para usar una herramienta digital o resolver un procedimiento.</p></div>
+              <div class="card"><b>Estudio de caso</b><p>Situación real o simulada para analizar y tomar decisiones.</p></div>
+              <div class="card"><b>Producto estudiantil</b><p>El estudiante crea un video, infografía animada o presentación narrada.</p></div>
+            </div>
+            <div class="quote"><p><strong>Aplicación válida:</strong> ver un video y luego clasificar, argumentar, resolver o crear. Solo mirar no es suficiente.</p></div>
+            <div class="page-number"><span>Miradas Audiovisuales</span><span>9</span></div>
+          </div>
+        `
+      },
+      /* 10 - Evaluación */
+      {
+        title: 'Evaluación',
+        html: `
+          <div class="page-inner">
+            <span class="kicker">Evaluación</span>
+            <h2>Evaluar es comprobar si el recurso ayudó a aprender.</h2>
+            <p>Un material audiovisual se evalúa por su pertinencia pedagógica, claridad conceptual, diseño visual, calidad técnica, accesibilidad, interactividad e impacto en el aprendizaje.</p>
+            <table class="rubric" aria-label="Criterios de evaluación del material audiovisual">
+              <thead><tr><th>Criterio</th><th>Pregunta clave</th></tr></thead>
+              <tbody>
+                <tr><td>Pertinencia</td><td>¿Responde al objetivo de aprendizaje?</td></tr>
+                <tr><td>Claridad</td><td>¿La información es correcta y comprensible?</td></tr>
+                <tr><td>Diseño</td><td>¿La imagen, color y tipografía ayudan a leer?</td></tr>
+                <tr><td>Técnica</td><td>¿El audio y la imagen permiten entender?</td></tr>
+                <tr><td>Accesibilidad</td><td>¿Reduce barreras para distintos estudiantes?</td></tr>
+              </tbody>
+            </table>
+            <div class="page-number"><span>Miradas Audiovisuales</span><span>10</span></div>
+          </div>
+        `
+      },
+      /* 11 - Instrumentos */
+      {
+        title: 'Instrumentos',
+        html: `
+          <div class="page-inner">
+            <span class="kicker">Instrumentos</span>
+            <h2>La evaluación debe dejar evidencia.</h2>
+            <div class="checklist">
+              <div class="check">Lista de cotejo para verificar elementos mínimos.</div>
+              <div class="check">Rúbrica para valorar niveles de desempeño.</div>
+              <div class="check">Cuestionario breve para comprensión conceptual.</div>
+              <div class="check">Foro reflexivo para argumentación y pensamiento crítico.</div>
+              <div class="check">Producto práctico para aplicar lo aprendido.</div>
+            </div>
+            <div class="case-box">
+              <h3>Evaluación recomendada</h3>
+              <p>Después de observar el recurso, el estudiante debe producir algo: responder, clasificar, crear, comparar, explicar o resolver.</p>
+            </div>
+            <div class="page-number"><span>Miradas Audiovisuales</span><span>11</span></div>
+          </div>
+        `
+      },
+      /* 12 - Caso práctico */
+      {
+        title: 'Caso práctico',
+        html: `
+          <div class="page-inner">
+            <span class="kicker">Caso práctico</span>
+            <h2>Video educativo: correos fraudulentos.</h2>
+            <div class="case-box">
+              <h3>Tema</h3>
+              <p>Seguridad digital y detección de correos fraudulentos.</p>
+              <h3>Nivel</h3>
+              <p>Secundaria o primer nivel universitario.</p>
+              <h3>Objetivo</h3>
+              <p>Identificar señales de un correo fraudulento y aplicar medidas básicas de protección digital.</p>
+            </div>
+            <div class="process">
+              <div class="step"><span>1</span><div><b>Inicio</b><p>Se muestra un correo sospechoso: "Su cuenta será bloqueada. Haga clic aquí".</p></div></div>
+              <div class="step"><span>2</span><div><b>Desarrollo</b><p>Se explican remitente falso, urgencia, enlaces dudosos y solicitud de datos.</p></div></div>
+              <div class="step"><span>3</span><div><b>Cierre</b><p>El estudiante clasifica tres correos y justifica su respuesta.</p></div></div>
+            </div>
+            <div class="page-number"><span>Miradas Audiovisuales</span><span>12</span></div>
+          </div>
+        `
+      },
+      /* 13 - Lista de cotejo */
+      {
+        title: 'Lista de cotejo',
+        html: `
+          <div class="page-inner">
+            <span class="kicker">Evidencia</span>
+            <h2>Lista de cotejo del caso práctico.</h2>
+            <table class="rubric" aria-label="Lista de cotejo para correos fraudulentos">
+              <thead><tr><th>Indicador</th><th>Sí</th><th>No</th></tr></thead>
+              <tbody>
+                <tr><td>Identifica el remitente sospechoso.</td><td></td><td></td></tr>
+                <tr><td>Reconoce enlaces peligrosos.</td><td></td><td></td></tr>
+                <tr><td>Explica por qué un correo puede ser fraudulento.</td><td></td><td></td></tr>
+                <tr><td>Propone una acción segura.</td><td></td><td></td></tr>
+              </tbody>
+            </table>
+            <div class="quote"><p><strong>Clave:</strong> el recurso audiovisual termina cuando hay evidencia de aprendizaje, no cuando acaba el video.</p></div>
+            <div class="page-number"><span>Miradas Audiovisuales</span><span>13</span></div>
+          </div>
+        `
+      },
+      /* 14 - Diseño digital */
+      {
+        title: 'Diseño digital',
+        html: `
+          <div class="page-inner">
+            <span class="kicker">Diseño gráfico</span>
+            <h2>Para que se vea como revista, debe tener ritmo visual.</h2>
+            <div class="cards">
+              <div class="card"><b>Jerarquía</b><p>Títulos grandes, subtítulos claros, textos breves y recuadros destacados.</p></div>
+              <div class="card"><b>Color</b><p>Paleta coherente: azul, celeste, blanco, gris y acentos cálidos.</p></div>
+              <div class="card"><b>Diagramación</b><p>No saturar páginas. Usar aire visual y bloques de lectura.</p></div>
+              <div class="card"><b>Recursos</b><p>Íconos, capturas simuladas, diagramas, códigos QR y ejemplos.</p></div>
+            </div>
+            <p>Una revista digital no debe parecer una tarea pegada en páginas blancas. Debe tener intención editorial.</p>
+            <div class="page-number"><span>Miradas Audiovisuales</span><span>14</span></div>
+          </div>
+        `
+      },
+      /* 15 - Conclusión */
+      {
+        title: 'Conclusión',
+        html: `
+          <div class="page-inner">
+            <span class="kicker">Cierre</span>
+            <h2>El recurso audiovisual es una experiencia de aprendizaje.</h2>
+            <p class="lead">Los materiales audiovisuales educativos son poderosos cuando combinan intención pedagógica, claridad comunicativa, calidad técnica, accesibilidad y evaluación.</p>
+            <p>Su eficacia no depende únicamente del programa de edición ni de los efectos visuales, sino de la relación entre objetivo, contenido, estrategia didáctica y evidencia de aprendizaje.</p>
+            <div class="visual" aria-hidden="true"><span class="circle c1"></span><span class="circle c2"></span><strong>diseñar<br><em>enseñar</em><br>evaluar</strong></div>
+            <div class="page-number"><span>Miradas Audiovisuales</span><span>15</span></div>
+          </div>
+        `
+      },
+      /* 16 - Referencias */
+      {
+        title: 'Referencias',
+        html: `
+          <div class="page-inner">
+            <span class="kicker">Referencias</span>
+            <h2>Fuentes bibliográficas</h2>
+            <div class="refs">
+              <p>CAST. (s. f.). <em>Universal Design for Learning Guidelines</em>. https://udlguidelines.cast.org/</p>
+              <p>Kirkpatrick Partners. (s. f.). <em>The Kirkpatrick Model</em>. https://www.kirkpatrickpartners.com/the-kirkpatrick-model/</p>
+              <p>Mayer, R. E. (2002). <em>Multimedia learning</em>. Cambridge University Press.</p>
+              <p>UNESCO. (2018). <em>ICT Competency Framework for Teachers: Version 3</em>. United Nations Educational, Scientific and Cultural Organization.</p>
+              <p>UNESCO. (2023). <em>UNESCO's ICT Competency Framework for Teachers</em>. https://www.unesco.org/en/digital-competencies-skills/ict-cft</p>
+            </div>
+            <div class="page-number"><span>Miradas Audiovisuales</span><span>16</span></div>
+          </div>
+        `
+      },
+      /* 17 - Contraportada */
+      {
+        title: 'Contraportada',
+        isCover: true,
+        html: `
+          <div class="cover-content">
+            <div>
+              <span class="mag-tag">Contraportada</span>
+              <h1>Aprender también entra por la mirada.</h1>
+              <p>Revista digital elaborada para el curso Tecnología y Materiales Didácticos, Licenciatura universitaria, Universidad Castro Carazo.</p>
+            </div>
+            <div class="cover-meta">
+              <div class="meta-card"><small>Autor</small><strong>Daniel Tijerino Cerón</strong></div>
+              <div class="meta-card"><small>Docente</small><strong>Dra. Ana Lucía Fallas Garro</strong></div>
+              <div class="meta-card"><small>Fecha</small><strong>2/07/2026</strong></div>
+              <div class="meta-card"><small>Sede</small><strong>Central</strong></div>
+            </div>
+            <div class="page-number" style="color:rgba(255,255,255,.5)"><span>Fin de la revista</span><span>Contraportada</span></div>
+          </div>
+        `
+      }
+    ];
+
+    /* ===== ELEMENTS ===== */
+    const $magazine = $('#magazine');
+    const mobileMag = document.getElementById('mobileMagazine');
+    const prevBtn = document.getElementById('prevBtn');
+    const nextBtn = document.getElementById('nextBtn');
+    const pageLabel = document.getElementById('pageLabel');
+    const progressBar = document.getElementById('progressBar');
+    const tocToggle = document.getElementById('tocToggle');
+    const tocOverlay = document.getElementById('tocOverlay');
+    const tocSidebar = document.getElementById('tocSidebar');
+    const tocClose = document.getElementById('tocClose');
+    const tocList = document.getElementById('tocList');
+    const loadingScreen = document.getElementById('loadingScreen');
+    const topbar = document.getElementById('topbar');
+    const swipeHint = document.getElementById('swipeHint');
+
+    const isMobile = () => window.matchMedia('(max-width: 900px)').matches;
+
+    /* ===== BUILD TOC SIDEBAR ===== */
+    pages.forEach((p, i) => {
+      const li = document.createElement('li');
+      li.className = 'toc-item' + (i === 0 ? ' active' : '');
+      li.dataset.page = i;
+      li.innerHTML = `<span class="toc-item-num">${i === 0 ? '★' : (i === pages.length - 1 ? '★' : i)}</span>${p.title}`;
+      li.addEventListener('click', () => {
+        goToPage(i);
+        closeToc();
+      });
+      tocList.appendChild(li);
+    });
+
+    /* ===== TOC OPEN/CLOSE ===== */
+    function openToc() {
+      tocOverlay.classList.add('open');
+      tocSidebar.classList.add('open');
+    }
+
+    function closeToc() {
+      tocOverlay.classList.remove('open');
+      tocSidebar.classList.remove('open');
+    }
+
+    tocToggle.addEventListener('click', openToc);
+    tocClose.addEventListener('click', closeToc);
+    tocOverlay.addEventListener('click', closeToc);
+
+    /* ===== UPDATE UI ===== */
+    function updateUI(pageNum) {
+      /* pageNum is 1-indexed for Turn.js, 0-indexed for mobile */
+      const idx = typeof pageNum === 'number' ? pageNum : 0;
+      const total = pages.length;
+      const currentIdx = isMobile() ? idx : Math.max(0, idx - 1);
+      const title = pages[currentIdx] ? pages[currentIdx].title : '';
+      pageLabel.textContent = title;
+      const pct = ((currentIdx + 1) / total) * 100;
+      progressBar.style.width = Math.min(pct, 100) + '%';
+
+      /* Update TOC active */
+      tocList.querySelectorAll('.toc-item').forEach(li => {
+        li.classList.toggle('active', parseInt(li.dataset.page) === currentIdx);
+      });
+
+      /* Buttons state */
+      if (isMobile()) {
+        prevBtn.disabled = currentIdx <= 0;
+        nextBtn.disabled = currentIdx >= total - 1;
+      } else {
+        const tp = $magazine.turn('pages');
+        const cp = $magazine.turn('page');
+        prevBtn.disabled = cp <= 1;
+        nextBtn.disabled = cp >= tp;
+      }
+    }
+
+    /* ===== DESKTOP: TURN.JS ===== */
+    function initDesktop() {
+      $magazine.empty();
+
+      /* Calculate dimensions */
+      const vw = window.innerWidth;
+      const vh = window.innerHeight;
+      const maxW = Math.min(1180, vw - 120);
+      const pageW = Math.floor(maxW / 2);
+      const pageH = Math.min(Math.floor(pageW * 1.38), vh - 120);
+
+      /* Create page elements */
+      pages.forEach((p, i) => {
+        const div = document.createElement('div');
+        div.className = 'page' + (p.isCover ? ' cover-page' : '') + (i % 2 === 0 ? ' even-page' : ' odd-page');
+        div.innerHTML = p.html;
+        if (!p.isCover) {
+          const curl = document.createElement('span');
+          curl.className = 'page-curl';
+          div.appendChild(curl);
+        }
+        $magazine.append(div);
+      });
+
+      /* Init Turn.js */
+      $magazine.turn({
+        width: pageW * 2,
+        height: pageH,
+        autoCenter: true,
+        acceleration: true,
+        gradients: true,
+        elevation: 50,
+        duration: 1200,
+        when: {
+          turning: function(event, page, view) {
+            updateUI(page);
+          },
+          turned: function(event, page, view) {
+            updateUI(page);
+          }
+        }
+      });
+
+      updateUI(1);
+
+      /* In-page TOC click handlers for desktop */
+      setTimeout(() => {
+        $magazine.find('.toc-page-list li[data-goto]').on('click', function() {
+          const target = parseInt($(this).data('goto'));
+          if (target >= 0 && target < pages.length) {
+            $magazine.turn('page', target + 1);
+          }
+        });
+      }, 500);
+    }
+
+    /* ===== MOBILE: SWIPE ===== */
+    let mobileCurrentPage = 0;
+    let touchStartX = null;
+    let touchStartY = null;
+
+    function initMobile() {
+      mobileMag.innerHTML = '';
+      pages.forEach((p, i) => {
+        const div = document.createElement('div');
+        div.className = 'mobile-page' + (p.isCover ? ' cover-page' : '') + (i === 0 ? ' active' : '');
+        div.dataset.index = i;
+        div.innerHTML = p.html;
+        mobileMag.appendChild(div);
+      });
+      mobileCurrentPage = 0;
+      updateUI(0);
+
+      /* Mobile TOC click handlers */
+      mobileMag.querySelectorAll('.toc-page-list li[data-goto]').forEach(li => {
+        li.addEventListener('click', () => {
+          const target = parseInt(li.dataset.goto);
+          if (target >= 0 && target < pages.length) {
+            showMobilePage(target);
+          }
+        });
+      });
+    }
+
+    function showMobilePage(idx) {
+      if (idx < 0 || idx >= pages.length) return;
+      const allPages = mobileMag.querySelectorAll('.mobile-page');
+      allPages.forEach(p => p.classList.remove('active'));
+      allPages[idx].classList.add('active');
+      mobileCurrentPage = idx;
+      updateUI(idx);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    /* Swipe on mobile */
+    document.addEventListener('touchstart', e => {
+      if (!isMobile()) return;
+      touchStartX = e.changedTouches[0].screenX;
+      touchStartY = e.changedTouches[0].screenY;
+    }, { passive: true });
+
+    document.addEventListener('touchend', e => {
+      if (!isMobile() || touchStartX === null) return;
+      const dx = e.changedTouches[0].screenX - touchStartX;
+      const dy = e.changedTouches[0].screenY - touchStartY;
+      touchStartX = null;
+      if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 60) {
+        if (dx < 0) showMobilePage(mobileCurrentPage + 1);
+        else showMobilePage(mobileCurrentPage - 1);
+      }
+    }, { passive: true });
+
+    /* ===== NAV BUTTONS ===== */
+    prevBtn.addEventListener('click', () => {
+      if (isMobile()) {
+        showMobilePage(mobileCurrentPage - 1);
+      } else {
+        $magazine.turn('previous');
+      }
+    });
+
+    nextBtn.addEventListener('click', () => {
+      if (isMobile()) {
+        showMobilePage(mobileCurrentPage + 1);
+      } else {
+        $magazine.turn('next');
+      }
+    });
+
+    /* Keyboard */
+    window.addEventListener('keydown', e => {
+      if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+        e.preventDefault();
+        if (isMobile()) showMobilePage(mobileCurrentPage + 1);
+        else $magazine.turn('next');
+      }
+      if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+        e.preventDefault();
+        if (isMobile()) showMobilePage(mobileCurrentPage - 1);
+        else $magazine.turn('previous');
+      }
+    });
+
+    /* ===== GO TO PAGE (for TOC sidebar) ===== */
+    function goToPage(idx) {
+      if (isMobile()) {
+        showMobilePage(idx);
+      } else {
+        /* Turn.js uses 1-indexed pages */
+        $magazine.turn('page', idx + 1);
+      }
+    }
+
+    /* ===== AUTO-HIDE TOPBAR ON SCROLL (mobile) ===== */
+    let lastScrollY = 0;
+    window.addEventListener('scroll', () => {
+      const y = window.scrollY;
+      if (y > lastScrollY && y > 80) topbar.classList.add('hidden');
+      else topbar.classList.remove('hidden');
+      lastScrollY = y;
+    }, { passive: true });
+
+    /* ===== RESIZE HANDLER ===== */
+    let resizeTimer;
+    window.addEventListener('resize', () => {
+      clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(() => {
+        if (!isMobile()) {
+          const currentPage = $magazine.turn ? $magazine.turn('page') : 1;
+          $magazine.turn('destroy');
+          initDesktop();
+          try { $magazine.turn('page', currentPage); } catch(e) {}
+        }
+      }, 300);
+    });
+
+    /* ===== HIDE SWIPE HINT ON DESKTOP ===== */
+    if (!isMobile()) swipeHint.style.display = 'none';
+
+    /* ===== INIT ===== */
+    function boot() {
+      if (isMobile()) {
+        initMobile();
+      } else {
+        initDesktop();
+      }
+
+      /* Hide loading */
+      setTimeout(() => {
+        loadingScreen.classList.add('done');
+        setTimeout(() => loadingScreen.style.display = 'none', 700);
+      }, 800);
+    }
+
+    /* Wait for jQuery + Turn.js */
+    $(document).ready(boot);
+
+  })();
+  </script>
+
+</body>
+</html>
